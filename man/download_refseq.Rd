@@ -23,6 +23,7 @@ Returns a .fasta or .fasta.gz file of the desired RefSeq genomes. This file is n
 This function will automatically download RefSeq genome libraries in a .fasta format from the specified kingdom. The function will first download the summary report at: ftp://ftp.ncbi.nlm.nih.gov/genomes/**kingdom**/overview.txt, and then use this file to download genomes and combine them in a single compressed or uncompressed .fasta file.
 }
 \examples{
+\dontrun{
 ## Download all RefSeq reference bacterial genomes
 #download_refseq('bacteria') # these will take a little longer, so are commented
 
@@ -30,6 +31,6 @@ This function will automatically download RefSeq genome libraries in a .fasta fo
 download_refseq( 'viral', representative = TRUE )
 
 ## Download all RefSeq viral genomes
-#download_refseq( 'viral', reference = FALSE ) # these will take a little longer, so are commented
-
+download_refseq( 'viral', reference = FALSE ) # these will take a little longer, so are commented
+}
 }
