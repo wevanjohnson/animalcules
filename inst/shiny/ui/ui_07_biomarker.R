@@ -11,10 +11,25 @@ tabPanel("Biomarker",
                                           helpText("Please select 2 levels to compare"),
                                           uiOutput("biomarker_condition_options")
                          ),
-                         numericInput("num.cv.nfolds", "Number of CV nfolds", value = 3, max = 20, min = 3),
-                         numericInput("num.biomarker.run", "Number of CV repeats", value = 3, max = 100, min = 3),
-                         numericInput("percent_top_biomarker", "Top biomarker proportion", value = 0.2, max = 1, min = 0.01),
-                         selectInput("select_model_biomarker", "Select Model", c("logistic regression", "gbm", "random forest")),
+                         checkboxInput("biomarker_adv", "Advanced Options"),
+                         conditionalPanel(
+                           condition = "input.biomarker_adv == true",
+                           numericInput("num.cv.nfolds", "Number of CV nfolds", value = 3, max = 20, min = 3)
+                         ),
+                         conditionalPanel(
+                           condition = "input.biomarker_adv == true",
+                           numericInput("num.biomarker.run", "Number of CV repeats", value = 3, max = 100, min = 3)
+                         ),
+                         conditionalPanel(
+                           condition = "input.biomarker_adv == true",
+                           numericInput("percent_top_biomarker", "Top biomarker proportion", value = 0.2, max = 1, min = 0.01)
+                         ),
+                         conditionalPanel(
+                           condition = "input.biomarker_adv == true",
+                           selectInput("select_model_biomarker", "Select Model", c("logistic regression", "gbm", "random forest"))
+                         ),
+
+
                          withBusyIndicatorUI(
                             actionButton("goButtonBiomarker",
                                          "Run",
@@ -32,9 +47,9 @@ tabPanel("Biomarker",
                                      br(),
                                      plotOutput("importance_plot",height=300)),
 
-                            tabPanel("CV performance",
+                            tabPanel("CV ROC plot",
                                      br(),
-                                     tableOutput("loocv_output"))
+                                     plotOutput("roc_plot"))
                          ), width=9
                      )
                  )

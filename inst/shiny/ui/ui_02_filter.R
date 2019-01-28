@@ -44,20 +44,27 @@ tabPanel("Summary and Filter",
 
           br(),
 
+          # Reset
+          withBusyIndicatorUI(
+            actionButton("filter_reset_btn", "Reset")
+          ),
+          width=5,
+
+          checkboxInput("filter_adv", "Advanced Options"),
+          conditionalPanel(
+            condition = "input.filter_adv == true",
           # Discard samples
           selectizeInput("filter_sample_dis", "Discard Samples", choices=sam.name, multiple=TRUE),
           # Discard organisms
           selectizeInput("filter_organism_dis", "Discard Organisms", choices=org.name, multiple=TRUE),
           withBusyIndicatorUI(
             actionButton("filter_discard_btn", "Discard")
+          )
           ),
 
-          br(),
-          # Reset
-          withBusyIndicatorUI(
-            actionButton("filter_reset_btn", "Reset")
-          ),
-          width=5
+
+          br()
+
         ),
         mainPanel(
           fluidRow(
@@ -68,7 +75,7 @@ tabPanel("Summary and Filter",
               plotlyOutput("filter_summary_top_plot", height="350px"),
               plotlyOutput("filter_summary_bottom_plot", height="350px")
             )
-          ), 
+          ),
           width=7
         )
       )
@@ -77,13 +84,25 @@ tabPanel("Summary and Filter",
       tags$br(),
       sidebarLayout(
         sidebarPanel(
-          selectizeInput('filter_bin_cov', 'Covariate', choices=num_covariates, multiple=FALSE),
+          selectizeInput('filter_bin_cov', 'Continuous Variables', choices=num_covariates, multiple=FALSE),
           uiOutput("filter_nbins"),
-          textInput('filter_bin_breaks', 'Custom Breaks (Comma Delimited)'),
-          verbatimTextOutput("filter_bin_to1"),
-          textInput('filter_bin_labels', 'Custom Labels (Comma Delimited)'),
-          verbatimTextOutput("filter_bin_to2"),
-          textInput("filter_new_covariate", "Covariate Label", value = "new_cov"),
+
+          textInput("filter_new_covariate", "New Variable Label", value = "new_var"),
+
+          checkboxInput("filter_bin_adv", "Advanced Options"),
+
+          conditionalPanel(
+            condition = "input.filter_bin_adv == true",
+            textInput('filter_bin_breaks', 'Custom Breaks (Comma Delimited)'),
+            verbatimTextOutput("filter_bin_to1")
+          ),
+
+          conditionalPanel(
+            condition = "input.filter_bin_adv == true",
+            textInput('filter_bin_labels', 'Custom Labels (Comma Delimited)'),
+            verbatimTextOutput("filter_bin_to2")
+          ),
+
           actionButton("filter_create_bins", "Create Bins"),
           width=5
         ),

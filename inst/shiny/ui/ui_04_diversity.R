@@ -5,10 +5,19 @@ tabPanel("Diversity",
       sidebarLayout(
         sidebarPanel(
           br(),
-          selectizeInput('taxl.alpha', 'Taxonomy Level', choices = tax.name, selected='no rank'),
+          selectizeInput('taxl.alpha', 'Taxonomy Level', choices = tax.name, selected=tax.default),
           selectInput("select_alpha_div_condition", "Compare between:", covariates.colorbar),
-          selectInput("select_alpha_div_method", "Choose method:", alpha.methods),
-          selectInput("select_alpha_stat_method","Statistical Test", c("Mann-Whitney","T-test", "Kruskal-Wallis")),
+          checkboxInput("alpha_adv", "Advanced Options"),
+          conditionalPanel(
+            condition = "input.alpha_adv == true",
+            selectInput("select_alpha_div_method", "Choose method:", alpha.methods)
+          ),
+          conditionalPanel(
+            condition = "input.alpha_adv == true",
+            selectInput("select_alpha_stat_method","Statistical Test", c("Wilcoxon rank sum test","T-test", "Kruskal-Wallis"))
+          ),
+
+
           actionButton("alpha_boxplot", "Run")
         ),
         mainPanel(
@@ -31,7 +40,7 @@ tabPanel("Diversity",
       br(),
       sidebarLayout(
         sidebarPanel(
-          selectizeInput('taxl.beta', 'Taxonomy Level', choices = tax.name, selected='no rank'),
+          selectizeInput('taxl.beta', 'Taxonomy Level', choices = tax.name, selected=tax.default),
           # selectInput("select_beta_div_method", "Choose method:", beta.methods),
           selectizeInput('bdhm_select_conditions', 'Color Samples by Condition', choices=covariates.colorbar, multiple=TRUE),
           radioButtons("bdhm_sort_by", "Sort By", c("No Sorting" = "nosort", "Conditions" = "conditions"), selected="nosort"),
@@ -46,7 +55,7 @@ tabPanel("Diversity",
             tabPanel("Boxplot",
               fluidRow(
                 column(4,
-                  selectInput("select_beta_stat_method","Select Test", c("PERMANOVA", "Kruskal-Wallis", "Mann-Whitney")),
+                  selectInput("select_beta_stat_method","Select Test", c("PERMANOVA", "Kruskal-Wallis", "Wilcoxon rank sum test")),
                   helpText("Only variables with 2 levels are supported" ),
                   selectInput("select_beta_condition", "Select condition", covariates.two.levels),
                   numericInput("num_permutation_permanova", "Number of permutations", value = 999, max = 2000)
