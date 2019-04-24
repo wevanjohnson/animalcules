@@ -4,11 +4,9 @@
 #' @return A single value
 #'
 #' @examples
-#' shannon(c(1:10))
+#' shannon(seq_len(10))
 #'
 #' @export
-
-
 
 # x: Species count vector
 shannon <- function(x) {
@@ -24,5 +22,4 @@ shannon <- function(x) {
 
     # Shannon index
     (-sum(p * log(p)))
-
 }

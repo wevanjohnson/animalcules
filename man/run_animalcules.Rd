@@ -2,10 +2,18 @@
 % Please edit documentation in R/runApp.R
 \name{run_animalcules}
 \alias{run_animalcules}
-\title{Find the taxonomy for maximum 300 tids}
+\title{Run animalcules shiny app}
 \usage{
 run_animalcules()
 }
+\value{
+The shiny app will open
+}
 \description{
-Find the taxonomy for maximum 300 tids
+Run animalcules shiny app
+}
+\examples{
+\dontrun{
+run_animalcules()
+}
 }

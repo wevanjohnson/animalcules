@@ -10,11 +10,12 @@ find_taxonomy(tids)
 \item{tids}{Given taxonomy ids}
 }
 \value{
-taxondata Data with the taxonomy information
+A list of taxon levels with information
 }
 \description{
 Find the taxonomy for unlimited tids
 }
 \examples{
-taxonLevels <- find_taxonomy(1200)
+taxonLevels <- find_taxonomy(tids=1200)
+
 }

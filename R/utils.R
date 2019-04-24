@@ -3,8 +3,15 @@
 #' @param counts_table A organism x sample data frame of counts
 #' @param tax_table A organism x taxlev data frame of labels
 #' @param higher_level Higher taxon level to upsample to
-#' @return A organism x sample data frame of counts aggregated by a higher taxon level
+#' @return A organism x sample data frame of counts
 #'
+#' @examples	
+#' toy_data <- readRDS(system.file("extdata/toy_data.rds", package = "animalcules"))
+#' tax_table <- toy_data$tax_table
+#' sam_table <- toy_data$sam_table
+#' counts_table <- toy_data$counts_table 
+#' counts_table <- upsample_counts(counts_table, tax_table, "phylum")
+#' 
 #' @import magrittr
 #' @import reshape2
 #' @import SummarizedExperiment
@@ -12,10 +19,11 @@
 #' @export
 upsample_counts <- function(counts_table, tax_table, higher_level) {
     counts_table$higher_level = tax_table[[higher_level]]
-    counts_table <- reshape2::melt(counts_table, id.vars="higher_level") %>%
-                    S4Vectors::aggregate(.~variable+higher_level, . , sum) %>%
-                    reshape2::dcast(higher_level~variable) %>%
-                    as.data.frame()
+    counts_table <- reshape2::melt(counts_table, id.vars = "higher_level") %>%
+    S4Vectors::aggregate(. ~ 
+        variable + higher_level, ., sum) %>% 
+        reshape2::dcast(higher_level ~ variable) %>% 
+        as.data.frame()
     rownames(counts_table) <- counts_table$higher_level
     counts_table$higher_level <- NULL
     return(counts_table)
@@ -27,15 +35,16 @@ upsample_counts <- function(counts_table, tax_table, higher_level) {
 #' @return A organism x sample data frame of relative abundances
 #'
 #' @examples
-#' counts_to_relabu(matrix(1:12,4))
+#' counts_to_relabu(matrix(seq_len(12),4))
 #'
 #' @import magrittr
 #' @import SummarizedExperiment
+#'
 #' @export
 counts_to_relabu <- function(counts_table) {
-    sapply(counts_table, prop.table) %>%
-    as.data.frame() %>%
-    magrittr::set_colnames(colnames(counts_table)) %>%
+    prop.table(as.matrix(counts_table), 2) %>% 
+    as.data.frame() %>% 
+    magrittr::set_colnames(colnames(counts_table)) %>% 
     magrittr::set_rownames(rownames(counts_table))
 }
 
@@ -45,44 +54,50 @@ counts_to_relabu <- function(counts_table) {
 #' @return A organism x sample data frame of logcpm counts
 #'
 #' @examples
-#' logcpm <- counts_to_logcpm(matrix(1:12,4))
+#' logcpm <- counts_to_logcpm(as.data.frame(matrix(seq_len(12),4)))
 #'
 #' @import magrittr
 #' @import SummarizedExperiment
 #'
 #' @export
 counts_to_logcpm <- function(counts_table) {
-    sapply(counts_table, function(x) log10(x*1e6/sum(x) + 1)) %>%
-    as.data.frame() %>%
-    magrittr::set_colnames(colnames(counts_table)) %>%
+    vapply(as.data.frame(counts_table), 
+           function(x) log10(x * 1e+06/sum(x) + 1),
+           c(rep(1.0,nrow(counts_table)))) %>%
+    as.data.frame() %>% 
+    magrittr::set_colnames(colnames(counts_table)) %>% 
     magrittr::set_rownames(rownames(counts_table))
 }
 
 #' Modify samples of multi-assay experiment object
 #'
 #' @param MAE A multi-assay experiment object
-#' @param isolate_samples Isolate specific samples e.g. c("SAM_01", "SAM_02")
-#' @param discard_samples Discard specific samples e.g. c("SAM_01", "SAM_02")
+#' @param isolate_samples Isolate specific samples e.g. c('SAM_01', 'SAM_02')
+#' @param discard_samples Discard specific samples e.g. c('SAM_01', 'SAM_02')
 #' @return A multi-assay experiment object
 #'
 #' @examples
-#' data_dir = system.file("extdata/MAE.rds", package = "animalcules")
+#' data_dir = system.file('extdata/MAE.rds', package = 'animalcules')
 #' toy_data <- readRDS(data_dir)
-#' subset <- mae_pick_samples(toy_data, isolate_samples=c("subject_9", "subject_14"))
+#' subset <- mae_pick_samples(toy_data, 
+#' isolate_samples=c('subject_9', 
+#' 'subject_14'))
 #'
 #' @import MultiAssayExperiment
 #'
 #' @export
-mae_pick_samples <- function(MAE, isolate_samples=NULL, discard_samples=NULL) {
+mae_pick_samples <- function(MAE, 
+                             isolate_samples = NULL, 
+                             discard_samples = NULL) {
     # Isolate all of these samples
     if (!is.null(isolate_samples)) {
-        MAE <- MAE[,isolate_samples,]
+        MAE <- MAE[, isolate_samples, ]
     }
     # Discard all of these samples
     if (!is.null(discard_samples)) {
         id = rownames(colData(MAE))
         id_isolate = id[!id %in% discard_samples]
-        MAE <- MAE[,id_isolate,]
+        MAE <- MAE[, id_isolate, ]
     }
     return(MAE)
 }
@@ -90,29 +105,32 @@ mae_pick_samples <- function(MAE, isolate_samples=NULL, discard_samples=NULL) {
 #' Modify organisms of multi-assay experiment object
 #'
 #' @param MAE A multi-assay experiment object
-#' @param isolate_organisms Isolate specific organisms e.g. c("ti|001", "ti|002")
-#' @param discard_organisms Discard specific organisms e.g. c("ti|001", "ti|002")
+#' @param isolate_organisms Isolate specific organisms e.g. ti|001, ti|002
+#' @param discard_organisms Discard specific organisms e.g. ti|001, ti|002
 #' @return A multi-assay experiment object
 #'
 #' @examples
-#' data_dir = system.file("extdata/MAE.rds", package = "animalcules")
+#' data_dir = system.file('extdata/MAE.rds', package = 'animalcules')
 #' toy_data <- readRDS(data_dir)
-#' subset <- mae_pick_organisms(toy_data, isolate_organisms=c("ti|001", "ti|002"))
+#' subset <- mae_pick_organisms(toy_data, 
+#' isolate_organisms=c('ti|001', 'ti|002'))
 #'
 #' @import MultiAssayExperiment
 #'
 #' @export
-mae_pick_organisms <- function(MAE, isolate_organisms=NULL, discard_organisms=NULL) {
+mae_pick_organisms <- function(MAE, 
+                            isolate_organisms = NULL, 
+                            discard_organisms = NULL) {
     # Isolate all of these organisms
     if (!is.null(isolate_organisms)) {
-        MAE <- MAE[isolate_organisms,,]
+        MAE <- MAE[isolate_organisms, , ]
     }
     # Discard all of these organisms
     if (!is.null(discard_organisms)) {
-        microbe <- MAE[['MicrobeGenetics']]
+        microbe <- MAE[["MicrobeGenetics"]]
         id = rownames(as.data.frame(assays(microbe)))
         id_isolate = id[!id %in% discard_organisms]
-        MAE <- MAE[id_isolate,,]
+        MAE <- MAE[id_isolate, , ]
     }
     return(MAE)
 }
@@ -123,14 +141,14 @@ mae_pick_organisms <- function(MAE, isolate_organisms=NULL, discard_organisms=NU
 #' @return A sample x condition data frame
 #'
 #' @examples
-#' df_char_to_factor(matrix(1:12))
+#' df_char_to_factor(matrix(seq_len(12)))
 #'
 #'
 #' @export
 df_char_to_factor <- function(df) {
-    for (i in 1:ncol(df)){
-        if (typeof(df[,i]) == "character"){
-            df[,i] <- as.factor(df[,i])
+    for (i in seq_len(ncol(df))) {
+        if (typeof(df[, i]) == "character" | length(unique(df[, i])) < 4) {
+            df[, i] <- as.factor(df[, i])
         }
     }
     return(df)
@@ -159,15 +177,20 @@ percent <- function(x, digits = 2, format = "f") {
 #'
 #' @examples
 #' nums <- 2
-#' is.categorical(nums)
+#' is_categorical(nums)
 #'
 #' @export
-is.categorical <- function(v) {
-   if (is.integer(v) || is.numeric(v)) {
-     return(FALSE)
-   } else {
-     return(TRUE)
-   }
+is_categorical <- function(v) {
+    if (is.integer(v) || is.numeric(v)) {
+        if (length(unique(v)) > 3) {
+            return(FALSE)
+        } else {
+            return(TRUE)
+        }
+        
+    } else {
+        return(TRUE)
+    }
 }
 
 #' check if integer(0)
@@ -177,11 +200,25 @@ is.categorical <- function(v) {
 #'
 #' @examples
 #' nums <- 2
-#' is.integer0(nums)
+#' is_integer0(nums)
 #'
 #' @export
-is.integer0 <- function(x){
-  is.integer(x) && length(x) == 0L
+is_integer0 <- function(x) {
+    is.integer(x) && length(x) == 0L
+}
+
+#' check if integer(1)
+#'
+#' @param x A single value
+#' @return Boolean
+#'
+#' @examples
+#' nums <- 2
+#' is_integer1(nums)
+#'
+#' @export
+is_integer1 <- function(x) {
+    is.integer(x) && length(x) == 1L
 }
 
 #' Converts decimal percentage to string with specified digits
@@ -195,4 +232,6 @@ is.integer0 <- function(x){
 #' pct2str(nums)
 #'
 #' @export
-pct2str <- function(v, digits=2) {sprintf(paste0('%.',digits,'f'), v*100)}
+pct2str <- function(v, digits = 2) {
+    sprintf(paste0("%.", digits, "f"), v * 100)
+}

@@ -7,7 +7,7 @@
 #' @param pcx Principal component on the x-axis e.g. 1
 #' @param pcy Principal component on the y-axis e.g. 2
 #' @param pcz Principal component on the z-axis e.g. 3
-#' @param datatype Datatype to use e.g. c("counts", "relabu", "logcpm")
+#' @param datatype Datatype to use e.g. c("logcpm", "relabu", "counts")
 #' @return A list with a plotly object and summary table
 #'
 #' @examples
@@ -24,6 +24,7 @@
 #' result$table
 #'
 #' @import dplyr
+#' @import scales
 #' @import plotly
 #' @import magrittr
 #' @import reshape2
@@ -31,47 +32,47 @@
 #'
 #' @export
 dimred_pca <- function(MAE,
-                       tax_level,
-                       color,
-                       shape=NULL,
-                       pcx=1,
-                       pcy=2,
-                       pcz=NULL,
-                       datatype=c("counts", "relabu", "logcpm")) {
+                        tax_level,
+                        color,
+                        shape=NULL,
+                        pcx=1,
+                        pcy=2,
+                        pcz=NULL,
+                        datatype=c("logcpm", "relabu", "counts")) {
 
     # Default variables
     datatype <- match.arg(datatype)
 
     # Extract data
-    microbe <- MultiAssayExperiment::experiments(MAE)[[1]]
-    host <- MultiAssayExperiment::experiments(MAE)[[2]]
+    microbe <- MAE[['MicrobeGenetics']]
+    #host <- MultiAssayExperiment::experiments(MAE)[[2]]
     tax_table <- as.data.frame(rowData(microbe)) # organism x taxlev
     sam_table <- as.data.frame(colData(microbe)) # sample x condition
-    counts_table <- as.data.frame(assays(microbe))[,rownames(sam_table)] # organism x sample
+    counts_table <- 
+    as.data.frame(assays(microbe))[,rownames(sam_table)] # organism x sample
 
     df <- counts_table %>%
-          # Sum counts by taxon level
-          upsample_counts(tax_table, tax_level) %>%
-          # Choose data type
-          {
-              if (datatype == "relabu") {
-                  counts_to_relabu(.)
-              } else if (datatype == "logcpm") {
-                  counts_to_logcpm(.)
-              } else {
-                  .
-              }
-          } %>%
-          # Fix constant/zero row
-          {
-              if (sum(rowSums(as.matrix(.)) == 0) > 0){
-                  . <- .[-which(rowSums(as.matrix(.)) == 0),]
-              } else {
-                  .
-              }
-          } %>%
-          # Transpose
-          t()
+        # Sum counts by taxon level
+        upsample_counts(tax_table, tax_level) %>%
+        # Choose data type
+            {
+            if (datatype == "relabu") {
+                counts_to_relabu(.)
+            } else if (datatype == "logcpm") {
+                counts_to_logcpm(.)
+            } else {         .
+            }
+            } %>%
+            # Fix constant/zero row
+            {
+                if (sum(rowSums(as.matrix(.)) == 0) > 0){
+                . <- .[-which(rowSums(as.matrix(.)) == 0),]
+            } else {
+                .
+            }
+    } %>%
+        # Transpose
+        t()
 
     # PCA
     df.prcomp <- stats::prcomp(df, scale=TRUE)
@@ -82,14 +83,16 @@ dimred_pca <- function(MAE,
 
     # Merge in covariate information
     if (!is.null(shape)) {
-        df.pca.m <- merge(df.pca, sam_table[, c(color, shape), drop=FALSE], by=0, all=TRUE)
-
+        df.pca.m <- merge(df.pca, 
+        sam_table[, c(color, shape), drop=FALSE], by=0, all=TRUE)
         # When shape is required
-        shape <- colnames(df.pca.m)[ncol(df.pca.m)] # Bypass duplicate colnames if color == shape
+        # Bypass duplicate colnames if color == shape
+        shape <- colnames(df.pca.m)[ncol(df.pca.m)] 
         df.pca.m[[shape]] <- as.factor(df.pca.m[[shape]])
 
     } else {
-        df.pca.m <- merge(df.pca, sam_table[, color, drop=FALSE], by=0, all=TRUE)
+        df.pca.m <- 
+        merge(df.pca, sam_table[, color, drop=FALSE], by=0, all=TRUE)
         shape <- 'shape' # Referenced by plotly later
         df.pca.m[[shape]] <- 1 # Constant results in omitting shape
     }
@@ -99,36 +102,43 @@ dimred_pca <- function(MAE,
 
         # 2D Plot
         p <- plot_ly(df.pca.m,
-                     x = as.formula(paste("~PC", pcx, sep = "")),
-                     y = as.formula(paste("~PC", pcy, sep = "")),
-                     mode = "markers",
-                     color = as.formula(paste("~", color, sep = "")),
-                     symbol = as.formula(paste("~", shape, sep = "")),
-                     type = "scatter",
-                     text = df.pca.m$Row.names,
-                     marker = list(size = 10))
+                    x = as.formula(paste("~PC", pcx, sep = "")),
+                    y = as.formula(paste("~PC", pcy, sep = "")),
+                    mode = "markers",
+                    color = as.formula(paste("~", color, sep = "")),
+                    symbol = as.formula(paste("~", shape, sep = "")),
+                    type = "scatter",
+                    text = df.pca.m$Row.names,
+                    marker = list(size = 10))
     } else {
 
         # 3D Plot
         p <- plot_ly(df.pca.m,
-                     x = as.formula(paste("~PC", pcx, sep = "")),
-                     y = as.formula(paste("~PC", pcy, sep = "")),
-                     z = as.formula(paste("~PC", pcz, sep = "")),
-                     mode = "markers",
-                     color = as.formula(paste("~", color, sep = "")),
-                     symbol = as.formula(paste("~", shape, sep = "")),
-                     symbols = c("circle", "square", "diamond", "cross", "square-open", "circle-open", "diamond-open", "x"),
-                     type = "scatter3d",
-                     text = df.pca.m$Row.names,
-                     marker = list(size = 6))
+                    x = as.formula(paste("~PC", pcx, sep = "")),
+                    y = as.formula(paste("~PC", pcy, sep = "")),
+                    z = as.formula(paste("~PC", pcz, sep = "")),
+                    mode = "markers",
+                    color = as.formula(paste("~", color, sep = "")),
+                    symbol = as.formula(paste("~", shape, sep = "")),
+                    symbols = c("circle", 
+                        "square", 
+                        "diamond", 
+                        "cross", 
+                        "square-open", 
+                        "circle-open", 
+                        "diamond-open", 
+                        "x"),
+                    type = "scatter3d",
+                    text = df.pca.m$Row.names,
+                    marker = list(size = 6))
     }
 
     p$p <- NULL # To suppress a shiny warning
 
     # Formatting importance table
     colnames(df.imp) = c("Standard Deviation",
-                         "Variance Explained",
-                         "Cumulative Variance")
+                        "Variance Explained",
+                        "Cumulative Variance")
 
     # Show variance as a percentage
     df.imp[,2] <- scales::percent(as.numeric(df.imp[,2]))

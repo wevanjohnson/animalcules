@@ -6,19 +6,13 @@ tabPanel("Diversity",
         sidebarPanel(
           br(),
           selectizeInput('taxl.alpha', 'Taxonomy Level', choices = tax.name, selected=tax.default),
-          selectInput("select_alpha_div_condition", "Compare between:", covariates.colorbar),
+          selectInput("select_alpha_div_condition", "Compare between:", covariates),
           checkboxInput("alpha_adv", "Advanced Options"),
           conditionalPanel(
             condition = "input.alpha_adv == true",
             selectInput("select_alpha_div_method", "Choose method:", alpha.methods)
           ),
-          conditionalPanel(
-            condition = "input.alpha_adv == true",
-            selectInput("select_alpha_stat_method","Statistical Test", c("Wilcoxon rank sum test","T-test", "Kruskal-Wallis"))
-          ),
-
-
-          actionButton("alpha_boxplot", "Run")
+          actionButton("alpha_boxplot", "Run", class = "btn-primary")
         ),
         mainPanel(
           tabsetPanel(
@@ -41,10 +35,14 @@ tabPanel("Diversity",
       sidebarLayout(
         sidebarPanel(
           selectizeInput('taxl.beta', 'Taxonomy Level', choices = tax.name, selected=tax.default),
-          # selectInput("select_beta_div_method", "Choose method:", beta.methods),
           selectizeInput('bdhm_select_conditions', 'Color Samples by Condition', choices=covariates.colorbar, multiple=TRUE),
           radioButtons("bdhm_sort_by", "Sort By", c("No Sorting" = "nosort", "Conditions" = "conditions"), selected="nosort"),
-          actionButton("beta_heatmap", "Plot Heatmap")
+          checkboxInput("beta_adv", "Advanced Options"),
+          conditionalPanel(
+            condition = "input.beta_adv == true",
+            selectInput("beta_method", "Choose distance metric:", choices = c("bray", "jaccard"), selected="bray")
+          ),
+          actionButton("beta_heatmap", "Plot Heatmap", class = "btn-primary")
         ),
         mainPanel(
           tabsetPanel(
@@ -63,7 +61,7 @@ tabPanel("Diversity",
                 column(8,
                   br(),
                   DT::dataTableOutput("beta.stat.test"),
-                  actionButton("beta_boxplot", "Run")
+                  actionButton("beta_boxplot", "Run", class = "btn-primary")
                 )
               ),
               plotlyOutput("BetaDiversityBoxplot")

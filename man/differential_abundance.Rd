@@ -6,7 +6,7 @@
 \usage{
 differential_abundance(MAE, tax_level, input_da_condition = c(),
   input_da_condition_covariate = NULL, min_num_filter = 5,
-  input_da_padj_cutoff = 0.05)
+  input_da_padj_cutoff = 0.05, method = "DESeq2")
 }
 \arguments{
 \item{MAE}{A multi-assay experiment object}
@@ -17,12 +17,14 @@ differential_abundance(MAE, tax_level, input_da_condition = c(),
 
 \item{input_da_condition_covariate}{Covariates added to linear function}
 
-\item{min_num_filter}{Minimum number of counts of reads mapped to this microbe}
+\item{min_num_filter}{Minimum number reads mapped to this microbe}
 
-\item{input_da_padj_cutoff}{adjusted pvalue cutoff}
+\item{input_da_padj_cutoff}{adjusted pValue cutoff}
+
+\item{method}{choose between DESeq2 and limma}
 }
 \value{
-A plotly object
+A output dataframe
 }
 \description{
 Differential abundance analysis
@@ -30,12 +32,12 @@ Differential abundance analysis
 \examples{
 data_dir = system.file("extdata/MAE.rds", package = "animalcules")
 toy_data <- readRDS(data_dir)
-p <- differential_abundance(toy_data,
-tax_level="genus",
+differential_abundance(toy_data,
+tax_level="phylum",
 input_da_condition=c("DISEASE"),
-input_da_condition_covariate=c("SEX"),
-min_num_filter = 5,
-input_da_padj_cutoff = 0.05)
-p
+min_num_filter = 2,
+input_da_padj_cutoff = 0.5,
+method = "DESeq2")
+
 
 }

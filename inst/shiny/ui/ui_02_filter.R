@@ -12,7 +12,7 @@ tabPanel("Summary and Filter",
             selectizeInput('filter_type_metadata', 'Select a Condition', choices=covariates, multiple=FALSE),
             uiOutput("filter_metadata_params"),
             withBusyIndicatorUI(
-              actionButton("filter_metadata_btn", "Filter")
+              actionButton("filter_metadata_btn", "Filter", class = "btn-primary")
             )
           ),
 
@@ -26,19 +26,21 @@ tabPanel("Summary and Filter",
           conditionalPanel(condition = "input.filter_type == 'Microbes' & input.filter_type_microbes == 'Average Read Number'",
             numericInput("filter_microbes_read_inp", "Set Minimum", 0, min = 0, max = 10000),
             withBusyIndicatorUI(
-              actionButton("filter_microbes_read_btn", "Filter")
+              actionButton("filter_microbes_read_btn", "Filter", class = "btn-primary")
             )
           ),
           conditionalPanel(condition = "input.filter_type == 'Microbes' & input.filter_type_microbes == 'Average Relative Abundance'",
-            sliderInput("filter_microbes_rela_inp", "Restrict To", min = 0, max = 1, value = c(0,1), step=0.0001),
+            numericInput("filter_microbes_rela_min_inp", "Set Minimum", 0, min = 0, max = 1),
+            numericInput("filter_microbes_rela_max_inp", "Set Maximum", 1, min = 0, max = 1),
             withBusyIndicatorUI(
-              actionButton("filter_microbes_rela_btn", "Filter")
+              actionButton("filter_microbes_rela_btn", "Filter", class = "btn-primary")
             )
           ),
           conditionalPanel(condition = "input.filter_type == 'Microbes' & input.filter_type_microbes == 'Average Prevalence'",
-            sliderInput("filter_microbes_prev_inp", "Restrict To", min = 0, max = 1, value = c(0,1), step=0.001),
+            numericInput("filter_microbes_prev_min_inp", "Set Minimum", 0, min = 0, max = 1),
+            numericInput("filter_microbes_prev_max_inp", "Set Maximum", 1, min = 0, max = 1),
             withBusyIndicatorUI(
-              actionButton("filter_microbes_prev_btn", "Filter")
+              actionButton("filter_microbes_prev_btn", "Filter", class = "btn-primary")
             )
           ),
 
@@ -49,6 +51,9 @@ tabPanel("Summary and Filter",
             actionButton("filter_reset_btn", "Reset")
           ),
           width=5,
+          br(),
+          downloadButton('download_rds', 'Download Animalcules File'),
+
 
           checkboxInput("filter_adv", "Advanced Options"),
           conditionalPanel(
@@ -103,7 +108,7 @@ tabPanel("Summary and Filter",
             verbatimTextOutput("filter_bin_to2")
           ),
 
-          actionButton("filter_create_bins", "Create Bins"),
+          actionButton("filter_create_bins", "Create Bins", class = "btn-primary"),
           width=5
         ),
         mainPanel(
@@ -111,6 +116,79 @@ tabPanel("Summary and Filter",
           br(),
           plotlyOutput("filter_bin_plot"),
           width=7
+        )
+      )
+    ),
+    tabPanel("Assay dashboard",
+      br(),
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("select_assay", "Select Assay",
+              c("Count table" = "count",
+                "Relative Abundance table" = "ra",
+                "LogCPM table" = "logcpm",
+                "Taxonomy table" = "tax",
+                "Annotation table" = "annot"
+              )),
+        conditionalPanel(condition = sprintf("input['%s'] == 'count'", "select_assay"),
+          selectizeInput("assay_count_taxlev", "Tax Level", choices=tax.name, selected=tax.default),
+          actionButton("view_assay_count",
+             "View",
+             class = "btn-primary"),
+          downloadButton('download_assay_count', 'Download')
+        ),
+        
+        conditionalPanel(condition = sprintf("input['%s'] == 'ra'", "select_assay"),
+          selectizeInput("assay_ra_taxlev", "Tax Level", choices=tax.name, selected=tax.default),
+          actionButton("view_assay_ra",
+             "View",
+             class = "btn-primary"),
+          downloadButton('download_assay_ra', 'Download')
+        ),
+        conditionalPanel(condition = sprintf("input['%s'] == 'logcpm'", "select_assay"),
+          selectizeInput("assay_logcpm_taxlev", "Tax Level", choices=tax.name, selected=tax.default),
+          actionButton("view_assay_logcpm",
+             "View",
+             class = "btn-primary"),
+          downloadButton('download_assay_logcpm', 'Download')
+        ),
+        conditionalPanel(condition = sprintf("input['%s'] == 'tax'", "select_assay"),
+          actionButton("view_assay_tax",
+             "View",
+             class = "btn-primary"),
+          downloadButton('download_assay_tax', 'Download')
+        ),
+        conditionalPanel(condition = sprintf("input['%s'] == 'annot'", "select_assay"),
+          actionButton("view_assay_annot",
+             "View",
+             class = "btn-primary"),
+          downloadButton('download_assay_annot', 'Download')
+        )
+        
+        ),
+        mainPanel(
+          conditionalPanel(condition = sprintf("input['%s'] == 'count'", "select_assay"),
+              DT::dataTableOutput("assay_table_count", width='95%')
+        
+          ),
+          conditionalPanel(condition = sprintf("input['%s'] == 'ra'", "select_assay"),
+              DT::dataTableOutput("assay_table_ra", width='95%')
+        
+          ),
+          conditionalPanel(condition = sprintf("input['%s'] == 'logcpm'", "select_assay"),
+              DT::dataTableOutput("assay_table_logcpm", width='95%')
+        
+          ),
+          conditionalPanel(condition = sprintf("input['%s'] == 'tax'", "select_assay"),
+              DT::dataTableOutput("assay_table_tax", width='95%')
+        
+          ),
+          conditionalPanel(condition = sprintf("input['%s'] == 'annot'", "select_assay"),
+              DT::dataTableOutput("assay_table_annot", width='95%')
+        
+          )
+          
+          
         )
       )
     )

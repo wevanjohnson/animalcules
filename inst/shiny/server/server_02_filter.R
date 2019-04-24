@@ -6,7 +6,7 @@ output$filter_metadata_params <- renderUI({
     sam_table <- as.data.frame(colData(microbe)) # sample x condition
     covdat <- sam_table[,input$filter_type_metadata]
 
-    if (!is.categorical(covdat)) {
+    if (!is_categorical(covdat)) {
         sliderInput("filter_metadata_inp", "Include", min = min(covdat), max = max(covdat), value = c(min(covdat), max(covdat)))
     } else {
         selectizeInput("filter_metadata_inp", "Include", choices=unique(covdat), selected=unique(covdat), multiple=TRUE)
@@ -21,7 +21,7 @@ observeEvent(input$filter_metadata_btn,{
         cov <- input$filter_type_metadata
         covdat <- sam_table[,cov]
 
-        if (!is.categorical(covdat)) {
+        if (!is_categorical(covdat)) {
             minval <- input$filter_metadata_inp[1]
             maxval <- input$filter_metadata_inp[2]
             sam_table <- sam_table[covdat >= minval & covdat <= maxval,,drop=FALSE]
@@ -62,8 +62,8 @@ observeEvent(input$filter_microbes_rela_btn,{
         counts_table <- as.data.frame(assays(microbe))[,rownames(sam_table)] # organism x sample
         relabu_table <- counts_to_relabu(counts_table)
 
-        minval <- input$filter_microbes_rela_inp[1]
-        maxval <- input$filter_microbes_rela_inp[2]
+        minval <- input$filter_microbes_rela_min_inp
+        maxval <- input$filter_microbes_rela_max_inp
         row_means <- apply(relabu_table, 1, mean)
         organisms <- names(row_means[row_means >= minval & row_means <= maxval])
         vals$MAE <- mae_pick_organisms(MAE, isolate_organisms = organisms)
@@ -79,8 +79,8 @@ observeEvent(input$filter_microbes_prev_btn,{
         sam_table <- as.data.frame(colData(microbe)) # sample x condition
         counts_table <- as.data.frame(assays(microbe))[,rownames(sam_table)] # organism x sample
 
-        minval <- input$filter_microbes_prev_inp[1]
-        maxval <- input$filter_microbes_prev_inp[2]
+        minval <- input$filter_microbes_prev_min_inp
+        maxval <- input$filter_microbes_prev_max_inp
         row_means <- apply(counts_table, 1, function(x) (sum(x >= 1)/ncol(counts_table)))
         organisms <- names(row_means[row_means >= minval & row_means <= maxval])
         vals$MAE <- mae_pick_organisms(MAE, isolate_organisms = organisms)
@@ -135,19 +135,29 @@ output$filter_summary_table <- renderTable({
     dat['Number of Samples'] <- round(nrow(sam_table))
     dat['Number of Covariates'] <- round(ncol(sam_table))
     dat['Number of Organisms'] <- round(nrow(counts_table))
-    dat['Sample Mean Counts'] <- mean(apply(counts_table, 2, mean))
-    dat['Sample Median Counts'] <- median(apply(counts_table, 2, mean))
-    dat['Organism Mean Counts'] <- mean(apply(counts_table, 1, mean))
-    dat['Organism Median Counts'] <- median(apply(counts_table, 1, mean))
+    dat['Sample Mean Counts'] <- mean(apply(counts_table, 2, sum))
+    dat['Sample Median Counts'] <- median(apply(counts_table, 2, sum))
+    dat['Organism Mean Counts'] <- mean(apply(counts_table, 1, sum))
+    dat['Organism Median Counts'] <- median(apply(counts_table, 1, sum))
     df <- as.data.frame(unlist(dat))
 
     # Formatting
     df$temp <- rownames(df)
-    colnames(df) <- c("", "Summary Statistic")
+    colnames(df) <- c("", "Summary Statistics")
     df <- df[,c(2,1)]
-    df[,2] <- round(df[,2])
+    df[,2] <- as.character(round(df[,2]))
     return(df)
 })
+
+
+
+## download
+output$download_rds <- downloadHandler(filename = function() {
+  paste("animalcules_data_", Sys.Date(), ".rds", sep="")
+}, content = function(file) {
+  saveRDS(vals$MAE, file=file)
+})
+
 
 ## Categorize
 output$filter_nbins <- renderUI({
@@ -168,7 +178,7 @@ output$filter_bin_to2 <- renderPrint({
 
 output$filter_unbin_plot <- renderPlotly({
     MAE <- vals$MAE
-    microbe <- MultiAssayExperiment::experiments(MAE)[[1]]
+    microbe <- MAE[['MicrobeGenetics']]
     samples <- as.data.frame(colData(microbe))
     result <- filter_categorize(samples,
                                 sample_condition = input$filter_bin_cov,
@@ -179,7 +189,7 @@ output$filter_unbin_plot <- renderPlotly({
 
 do_categorize <- eventReactive(input$filter_create_bins, {
     MAE <- vals$MAE
-    microbe <- MultiAssayExperiment::experiments(MAE)[[1]]
+    microbe <- MAE[['MicrobeGenetics']]
     samples <- as.data.frame(colData(microbe))
 
     nbins <- input$filter_nbins
@@ -209,7 +219,7 @@ do_categorize <- eventReactive(input$filter_create_bins, {
     # Modify sample table
     MAE@colData <- DataFrame(result$sam_table)
 
-    for (i in 1:length(MAE)){
+    for (i in seq_len(length(MAE))){
         colData(MAE[[i]]) <- DataFrame(result$sam_table)
     }
 
@@ -225,3 +235,116 @@ output$filter_bin_plot <- renderPlotly({
     p <- do_categorize()
     return(p)
 })
+
+
+
+
+# Assays
+
+# Render count table
+find_assay_count <- eventReactive(input$view_assay_count, {
+  MAE <- vals$MAE
+  microbe <- MAE[['MicrobeGenetics']] #double bracket subsetting is easier
+  tax_table <- as.data.frame(rowData(microbe)) # organism x taxlev
+  sam_table <- as.data.frame(SummarizedExperiment::colData(microbe)) # sample x condition
+  counts_table <- as.data.frame(SummarizedExperiment::assays(microbe))[,rownames(sam_table)] # organism x sample
+  count_table_tax <- counts_table %>%
+                    upsample_counts(tax_table, input$assay_count_taxlev)
+  count_table_tax
+})
+output$assay_table_count <- DT::renderDataTable(find_assay_count(),
+                                         options=dtopts, 
+                                         rownames=TRUE)
+output$download_assay_count <- downloadHandler(filename = function() {
+  paste0("Assay_count_", input$assay_count_taxlev, ".csv", sep = "")
+}, content = function(file) {
+  df.out <- find_assay_count()
+  write.csv(df.out, file)
+})
+
+
+# Render ra table
+find_assay_ra <- eventReactive(input$view_assay_ra, {
+  MAE <- vals$MAE
+  microbe <- MAE[['MicrobeGenetics']] #double bracket subsetting is easier
+  tax_table <- as.data.frame(rowData(microbe)) # organism x taxlev
+  sam_table <- as.data.frame(SummarizedExperiment::colData(microbe)) # sample x condition
+  counts_table <- as.data.frame(SummarizedExperiment::assays(microbe))[,rownames(sam_table)] # organism x sample
+  relabu_table <- counts_table %>%
+                upsample_counts(tax_table, input$assay_ra_taxlev) %>%
+                counts_to_relabu() %>%
+                base::as.data.frame()
+  relabu_table
+})
+output$assay_table_ra <- DT::renderDataTable(find_assay_ra(),
+                                         options=dtopts, 
+                                         rownames=TRUE)
+output$download_assay_ra <- downloadHandler(filename = function() {
+  paste0("Assay_ra_", input$assay_ra_taxlev, ".csv", sep = "")
+}, content = function(file) {
+  df.out <- find_assay_ra()
+  write.csv(df.out, file)
+})
+
+# Render logcpm table
+find_assay_logcpm <- eventReactive(input$view_assay_logcpm, {
+  MAE <- vals$MAE
+  microbe <- MAE[['MicrobeGenetics']] #double bracket subsetting is easier
+  tax_table <- as.data.frame(rowData(microbe)) # organism x taxlev
+  sam_table <- as.data.frame(SummarizedExperiment::colData(microbe)) # sample x condition
+  counts_table <- as.data.frame(SummarizedExperiment::assays(microbe))[,rownames(sam_table)] # organism x sample
+  logcpm_table <- counts_table %>%
+                upsample_counts(tax_table, input$assay_logcpm_taxlev) %>%
+                counts_to_logcpm() %>%
+                base::as.data.frame()
+  logcpm_table
+})
+output$assay_table_logcpm <- DT::renderDataTable(find_assay_logcpm(),
+                                         options=dtopts, 
+                                         rownames=TRUE)
+output$download_assay_logcpm <- downloadHandler(filename = function() {
+  paste0("Assay_logcpm_", input$assay_logcpm_taxlev, ".csv", sep = "")
+}, content = function(file) {
+  df.out <- find_assay_logcpm()
+  write.csv(df.out, file)
+})
+
+
+# Render taxonomy table
+find_assay_tax <- eventReactive(input$view_assay_tax, {
+  MAE <- vals$MAE
+  microbe <- MAE[['MicrobeGenetics']] #double bracket subsetting is easier
+  tax_table <- as.data.frame(rowData(microbe)) # organism x taxlev
+  tax_table
+})
+output$assay_table_tax <- DT::renderDataTable(find_assay_tax(),
+                                         options=dtopts, 
+                                         rownames=TRUE)
+output$download_assay_tax <- downloadHandler(filename = function() {
+  "Assay_taxonomy.csv"
+}, content = function(file) {
+  df.out <- find_assay_tax()
+  write.csv(df.out, file)
+})
+
+
+# Render annotation table
+find_assay_annot <- eventReactive(input$view_assay_annot, {
+  MAE <- vals$MAE
+  microbe <- MAE[['MicrobeGenetics']] #double bracket subsetting is easier
+  sam_table <- as.data.frame(SummarizedExperiment::colData(microbe)) # sample x condition
+  sam_table
+})
+output$assay_table_annot <- DT::renderDataTable(find_assay_annot(),
+                                         options=dtopts, 
+                                         rownames=TRUE)
+output$download_assay_annot <- downloadHandler(filename = function() {
+  "Assay_annotation.csv"
+}, content = function(file) {
+  df.out <- find_assay_annot()
+  write.csv(df.out, file)
+})
+
+
+
+
