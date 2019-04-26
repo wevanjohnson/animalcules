@@ -4,12 +4,14 @@
 #' @return taxondata Data with the taxonomy information
 #' @import rentrez
 #' @import XML
-#'
+
 #' @examples
 #' taxonLevels <- find_taxonomy_300(tids=1200)
 #'
 #' @export
 find_taxonomy_300 <- function(tids) {
+    # @importFrom httr set_config
+    # set_config(httr::config(http_version = 0))
     if (is.null(tids)) {
         return(NULL)
     }
